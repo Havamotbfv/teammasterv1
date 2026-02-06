@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeamMaster Pro - Solusi Manajemen Kelas Modern</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #ffffff;
+            color: #1e293b;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .page-view {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .page-view.active {
+            display: block;
+            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .hero-gradient {
+            background: linear-gradient(135deg, #fee2e2 0%, #ffffff 50%, #ffffff 100%);
+            position: relative;
+        }
+
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+
+        @keyframes floating {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .tab-content {
+            display: none;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #wheelCanvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            transition: transform 6s cubic-bezier(0.1, 0, 0.1, 1);
+            box-shadow: 0 0 0 10px #fff, 0 20px 50px rgba(0,0,0,0.1);
+        }
+
+        /* Panah di sisi KANAN, sudut lancip menghadap KIRI */
+        .pointer {
+            position: absolute;
+            right: -15px; 
+            top: 50%;
+            transform: translateY(-50%);
+            width: 45px;
+            height: 45px;
+            background: #000000;
+            clip-path: polygon(100% 0%, 0% 50%, 100% 100%);
+            z-index: 100;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 2.5rem;
+            text-align: center;
+            max-width: 90%;
+            width: 400px;
+            animation: modalPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes modalPop {
+            from { transform: scale(0.7); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- LANDING PAGE -->
+    <div id="landing-page" class="page-view active hero-gradient flex flex-col items-center justify-center p-6 text-center">
+        <div class="max-w-3xl z-10">
+            <div class="w-20 h-20 bg-red-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-red-100 mx-auto mb-8 floating">
+                <i class="fas fa-layer-group text-white text-4xl"></i>
+            </div>
+            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6">
+                <span class="text-red-600">Team</span><span class="text-slate-800">Master</span>
+            </h1>
+            <p class="text-xl text-slate-600 mb-10 leading-relaxed max-w-2xl mx-auto">
+                Kelola pengelompokan di kelas dengan adil. Bagi kelompok otomatis dan tentukan urutan presentasi dalam satu klik.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button onclick="enterApp()" class="px-10 py-5 bg-red-600 text-white font-bold text-lg rounded-2xl shadow-xl shadow-red-100 hover:bg-red-700 hover:scale-105 transition-all">
+                    Mulai Aplikasi <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP VIEW -->
+    <div id="app-page" class="page-view bg-slate-50">
+        <nav class="bg-white border-b sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="goToLanding()">
+                    <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-layer-group text-white text-sm"></i>
+                    </div>
+                    <h2 class="font-extrabold text-slate-800">TeamMaster</h2>
+                </div>
+
+                <div class="flex bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
+                    <button onclick="switchTab('spin')" id="btn-spin" class="tab-btn active px-4 py-2 text-xs font-bold rounded-lg transition-all bg-white text-red-600 shadow-sm whitespace-nowrap">
+                        <i class="fas fa-sync-alt mr-1"></i> Spin Wheel
+                    </button>
+                    <button onclick="switchTab('kelompok')" id="btn-kelompok" class="tab-btn px-4 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 whitespace-nowrap">
+                        <i class="fas fa-users-cog mr-1"></i> Kelompok & Urutan
+                    </button>
+                    <button onclick="switchTab('absen')" id="btn-absen" class="tab-btn px-4 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 whitespace-nowrap">
+                        <i class="fas fa-list-ul mr-1"></i> List Absen
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto p-4 md:p-8">
+            <!-- TAB 1: SPIN WHEEL -->
+            <div id="tab-spin" class="tab-content active">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <div class="lg:col-span-4 space-y-6">
+                        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                            <h2 class="font-bold text-slate-800 mb-4">Pengaturan Roda</h2>
+                            <div class="flex gap-2 mb-4">
+                                <div class="flex-1">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Min</label>
+                                    <input type="number" id="spinMin" value="1" class="w-full p-3 bg-slate-50 border rounded-xl font-bold focus:ring-2 focus:ring-red-500 outline-none">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Max</label>
+                                    <input type="number" id="spinMax" value="36" class="w-full p-3 bg-slate-50 border rounded-xl font-bold focus:ring-2 focus:ring-red-500 outline-none">
+                                </div>
+                            </div>
+                            <button id="updateWheelBtn" class="w-full py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-700 transition-all">Terapkan Nomor</button>
+                        </div>
+                        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                            <h2 class="font-bold text-slate-800 mb-4 text-sm flex items-center justify-between">
+                                <span>Riwayat</span>
+                                <button onclick="clearHistory()" class="text-[10px] text-red-500 hover:underline">Reset</button>
+                            </h2>
+                            <div id="spinHistoryList" class="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                                <p class="text-slate-400 text-xs italic">Belum ada pemenang...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-8 bg-white p-8 md:p-12 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col items-center">
+                        <div class="relative w-full max-w-[420px] aspect-square">
+                            <div class="pointer"></div>
+                            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full z-50 shadow-md border flex items-center justify-center">
+                                <i class="fas fa-star text-[12px] text-red-400"></i>
+                            </div>
+                            <canvas id="wheelCanvas"></canvas>
+                        </div>
+                        <button id="spinBtn" class="mt-10 px-12 py-5 bg-red-600 hover:bg-red-700 text-white font-black text-xl rounded-2xl shadow-xl shadow-red-100 active:scale-95 uppercase tracking-widest">Putar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: KELOMPOK TERPADU -->
+            <div id="tab-kelompok" class="tab-content">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <div class="lg:col-span-4 space-y-4">
+                        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                            <h2 class="font-bold text-slate-800 mb-4">Input Anggota</h2>
+                            <textarea id="namesInput" class="w-full h-48 p-4 bg-slate-50 border rounded-2xl outline-none resize-none mb-4 focus:ring-2 focus:ring-red-500" placeholder="Ketik nama (Enter untuk baris baru)..."></textarea>
+                            
+                            <div class="mb-6">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase ml-2">Jumlah Kelompok</label>
+                                <input type="number" id="groupCountInput" value="4" class="w-full p-4 mt-1 bg-slate-50 border rounded-xl font-bold focus:ring-2 focus:ring-red-500 outline-none">
+                            </div>
+                            
+                            <button id="generateGroupsBtn" class="w-full py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg shadow-red-100 hover:bg-red-700 transition-all mb-4">
+                                Bagi Kelompok
+                            </button>
+
+                            <!-- TOMBOL ACAK URUTAN (Hanya muncul jika ada kelompok) -->
+                            <div id="orderActionArea" class="hidden border-t pt-4 text-center">
+                                <p class="text-[10px] font-bold text-slate-400 uppercase mb-3">Sistem Urutan Maju</p>
+                                <button id="randomizeOrderBtn" class="w-full py-4 bg-emerald-600 text-white font-bold rounded-2xl shadow-lg shadow-emerald-50 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2">
+                                    <i class="fas fa-random"></i> Acak Urutan Presentasi
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-8">
+                        <div id="groupResultGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="col-span-full py-24 text-center border-2 border-dashed border-slate-200 rounded-[3rem]">
+                                <i class="fas fa-users text-4xl text-slate-200 mb-4"></i>
+                                <p class="text-slate-400 font-medium">Input nama dan tentukan kelompok untuk memulai</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: LIST ABSEN -->
+            <div id="tab-absen" class="tab-content">
+                <div class="max-w-4xl mx-auto bg-white p-8 md:p-12 rounded-[3rem] border border-slate-200 shadow-sm text-center">
+                    <h2 class="text-2xl font-black text-slate-800 mb-2">Acak Urutan Absen</h2>
+                    <p class="text-slate-400 mb-10">Generate urutan acak untuk seluruh daftar hadir</p>
+                    <div class="flex gap-4 mb-8 max-w-sm mx-auto">
+                        <div class="flex-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase block">Dari</label>
+                            <input type="number" id="listMin" value="1" class="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-center focus:ring-2 focus:ring-red-500 outline-none">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase block">Sampai</label>
+                            <input type="number" id="listMax" value="36" class="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-center focus:ring-2 focus:ring-red-500 outline-none">
+                        </div>
+                    </div>
+                    <button id="generateListBtn" class="w-full py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg shadow-red-100 hover:bg-red-700 transition-all mb-10">Acak Sekarang</button>
+                    <div id="listResult" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 text-left"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL PEMENANG -->
+    <div id="winnerModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="text-red-600 mb-4 animate-bounce"><i class="fas fa-trophy text-6xl"></i></div>
+            <h2 class="text-2xl font-black text-slate-800 mb-1">Terpilih!</h2>
+            <div id="modalNumber" class="text-9xl font-black text-slate-900 mb-8">--</div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closeModal()" class="py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl">Tutup</button>
+                <button onclick="removeAndClose()" class="py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg">Hapus Nomor</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Navigation ---
+        function enterApp() {
+            document.getElementById('landing-page').classList.remove('active');
+            setTimeout(() => {
+                document.getElementById('app-page').classList.add('active');
+                initWheel();
+            }, 300);
+        }
+
+        function goToLanding() {
+            document.getElementById('app-page').classList.remove('active');
+            setTimeout(() => {
+                document.getElementById('landing-page').classList.add('active');
+            }, 300);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.className = "tab-btn px-4 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 whitespace-nowrap";
+            });
+            document.getElementById('tab-' + tabId).classList.add('active');
+            const btn = document.getElementById('btn-' + tabId);
+            btn.className = "tab-btn active px-4 py-2 text-xs font-bold rounded-lg transition-all bg-white text-red-600 shadow-sm whitespace-nowrap";
+        }
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // --- Spin Wheel Logic ---
+        let spinItems = [];
+        let isSpinning = false;
+        let startAngle = 0;
+        let arc = 0;
+        const colors = ["#ef4444", "#dc2626", "#b91c1c", "#f87171", "#ef4444", "#dc2626", "#b91c1c", "#f87171"];
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function initWheel() {
+            if (!canvas) return;
+            const min = parseInt(document.getElementById('spinMin').value) || 1;
+            const max = parseInt(document.getElementById('spinMax').value) || 36;
+            spinItems = [];
+            for (let i = min; i <= max; i++) spinItems.push(i.toString());
+            drawWheel();
+        }
+
+        function drawWheel() {
+            const size = 500;
+            canvas.width = size;
+            canvas.height = size;
+            const centerX = size/2, centerY = size/2, radius = size/2 - 10;
+            ctx.clearRect(0,0,size,size);
+            if(spinItems.length === 0) return;
+            arc = Math.PI * 2 / spinItems.length;
+            spinItems.forEach((name, i) => {
+                const angle = startAngle + i * arc;
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, angle, angle + arc);
+                ctx.fill();
+                ctx.save();
+                ctx.fillStyle = "white";
+                ctx.translate(centerX, centerY);
+                ctx.rotate(angle + arc/2);
+                ctx.textAlign = "right";
+                const fontSize = spinItems.length > 20 ? 12 : 20;
+                ctx.font = `800 ${fontSize}px Plus Jakarta Sans`;
+                ctx.fillText(name, radius - 25, fontSize/3);
+                ctx.restore();
+            });
+        }
+
+        function spin() {
+            if(isSpinning || spinItems.length === 0) return;
+            isSpinning = true;
+            let spinTime = 0;
+            const spinTimeTotal = 4000 + Math.random() * 2000;
+            const spinAngleStart = 10 + Math.random() * 10;
+            function animate() {
+                spinTime += 30;
+                if(spinTime >= spinTimeTotal) {
+                    isSpinning = false;
+                    const degrees = (startAngle * 180 / Math.PI) % 360;
+                    const arcd = 360 / spinItems.length;
+                    const index = Math.floor((360 - degrees % 360) / arcd) % spinItems.length;
+                    const winner = spinItems[index];
+                    document.getElementById('modalNumber').innerText = winner;
+                    document.getElementById('winnerModal').style.display = 'flex';
+                    return;
+                }
+                const ease = (t, b, c, d) => { t /= d; t--; return c * (t * t * t + 1) + b; };
+                const angle = spinAngleStart - ease(spinTime, 0, spinAngleStart, spinTimeTotal);
+                startAngle += (angle * Math.PI / 180);
+                drawWheel();
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        function closeModal() { document.getElementById('winnerModal').style.display = 'none'; }
+        function removeAndClose() {
+            const winner = document.getElementById('modalNumber').innerText;
+            const histList = document.getElementById('spinHistoryList');
+            if(histList.querySelector('p')) histList.innerHTML = '';
+            const item = document.createElement('div');
+            item.className = "flex justify-between p-3 bg-red-50 border border-red-100 rounded-xl text-sm animate-fadeIn";
+            item.innerHTML = `<span class="font-bold text-red-700">#${winner}</span><span class="text-[10px] text-slate-400">Selesai</span>`;
+            histList.prepend(item);
+            spinItems = spinItems.filter(n => n !== winner);
+            drawWheel();
+            closeModal();
+        }
+
+        function clearHistory() { document.getElementById('spinHistoryList').innerHTML = '<p class="text-slate-400 text-xs italic">Belum ada pemenang...</p>'; }
+
+        // --- Integrated Grouping & Presentation Order ---
+        let currentGroups = [];
+
+        document.getElementById('generateGroupsBtn').addEventListener('click', () => {
+            const rawNames = document.getElementById('namesInput').value;
+            const names = rawNames.split('\n').map(n => n.trim()).filter(n => n !== "");
+            const groupCount = parseInt(document.getElementById('groupCountInput').value) || 2;
+            
+            if (names.length === 0) return;
+
+            const shuffledNames = shuffleArray(names);
+            // Inisialisasi data kelompok dengan urutan maju default 0
+            currentGroups = Array.from({ length: Math.min(groupCount, names.length) }, (_, i) => ({
+                id: i + 1,
+                members: [],
+                presentationOrder: 0
+            }));
+            
+            shuffledNames.forEach((name, index) => {
+                currentGroups[index % currentGroups.length].members.push(name);
+            });
+
+            renderGroupGrid();
+            document.getElementById('orderActionArea').classList.remove('hidden');
+        });
+
+        document.getElementById('randomizeOrderBtn').addEventListener('click', () => {
+            const count = currentGroups.length;
+            const orders = shuffleArray(Array.from({length: count}, (_, i) => i + 1));
+            
+            currentGroups.forEach((group, index) => {
+                group.presentationOrder = orders[index];
+            });
+
+            renderGroupGrid();
+        });
+
+        function renderGroupGrid() {
+            const grid = document.getElementById('groupResultGrid');
+            
+            // Urutkan grup berdasarkan presentationOrder jika sudah diacak (order > 0)
+            const sortedGroups = [...currentGroups].sort((a, b) => {
+                if (a.presentationOrder === 0) return 0;
+                return a.presentationOrder - b.presentationOrder;
+            });
+
+            grid.innerHTML = sortedGroups.map((group) => `
+                <div class="bg-white p-6 rounded-3xl border-2 ${group.presentationOrder > 0 ? 'border-red-100 shadow-lg' : 'border-slate-100 shadow-sm'} relative overflow-hidden animate-fadeIn">
+                    ${group.presentationOrder > 0 ? `
+                        <div class="absolute top-0 right-0 bg-red-600 text-white px-5 py-1 rounded-bl-2xl font-black text-[10px] uppercase tracking-tighter">
+                            Maju Ke-${group.presentationOrder}
+                        </div>
+                    ` : ''}
+                    <h4 class="font-extrabold text-slate-800 mb-4 flex items-center gap-2">
+                        <span class="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center text-[12px] text-red-600">T${group.id}</span>
+                        Kelompok ${group.id}
+                    </h4>
+                    <ul class="space-y-2">
+                        ${group.members.map(m => `
+                            <li class="text-sm text-slate-600 flex items-center gap-2">
+                                <i class="fas fa-check-circle text-[10px] text-red-400"></i> ${m}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `).join('');
+        }
+
+        // --- List Feature ---
+        document.getElementById('generateListBtn').addEventListener('click', () => {
+            const min = parseInt(document.getElementById('listMin').value);
+            const max = parseInt(document.getElementById('listMax').value);
+            if (isNaN(min) || isNaN(max) || min >= max) return;
+            let pool = [];
+            for (let i = min; i <= max; i++) pool.push(i);
+            const shuffled = shuffleArray(pool);
+            document.getElementById('listResult').innerHTML = shuffled.map((num, i) => `
+                <div class="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-sm">
+                    <div class="text-[9px] font-bold text-slate-400 mb-1 uppercase">Antrean ${i + 1}</div>
+                    <div class="font-black text-red-600 text-xl">#${num}</div>
+                </div>
+            `).join('');
+        });
+
+        // Init
+        document.getElementById('updateWheelBtn').addEventListener('click', initWheel);
+        document.getElementById('spinBtn').addEventListener('click', spin);
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && document.getElementById('tab-spin').classList.contains('active')) {
+                if (document.getElementById('winnerModal').style.display !== 'flex') { e.preventDefault(); spin(); }
+            }
+        });
+    </script>
+</body>
+</html>
